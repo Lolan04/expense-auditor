@@ -1,0 +1,69 @@
+TRAVEL & EXPENSE POLICY — COMPANY POLICY MANUAL v2.1
+
+SECTION 2.1 — BUSINESS JUSTIFICATION
+All expense claims must include a clear and specific business justification.
+Vague descriptions such as "meeting", "misc", or "general" are not acceptable.
+Minimum description length is 20 characters.
+
+SECTION 3.1 — MEAL LIMITS BY LOCATION
+New York: Meals limit is $75 per claim.
+London: Meals limit is £40 per claim.
+Mumbai: Meals limit is INR 1200 per claim.
+Chicago: Meals limit is $60 per claim.
+Default cities: Meals limit is $50 per claim.
+
+SECTION 3.2 — TRANSPORT LIMITS BY LOCATION
+New York: Transport limit is $50 per claim.
+London: Transport limit is £35 per claim.
+Mumbai: Transport limit is INR 800 per claim.
+Chicago: Transport limit is $45 per claim.
+Default cities: Transport limit is $30 per claim.
+
+SECTION 3.3 — LODGING LIMITS BY LOCATION
+New York: Lodging limit is $250 per night.
+London: Lodging limit is £200 per night.
+Mumbai: Lodging limit is INR 5000 per night.
+Chicago: Lodging limit is $220 per night.
+Default cities: Lodging limit is $150 per night.
+
+SECTION 3.4 — CONFERENCE AND TRAINING
+New York: Conference limit is $500 per event.
+London: Conference limit is £400 per event.
+Mumbai: Conference limit is INR 8000 per event.
+Default cities: Conference limit is $300 per event.
+
+SECTION 4.1 — CLOSE TO LIMIT WARNING
+Any claim within 15% of the applicable spending limit must be flagged
+for senior review before reimbursement is processed.
+
+SECTION 4.2 — PROHIBITED EXPENSES
+The following are strictly non-reimbursable under any circumstances:
+Alcohol, bar tabs, nightclub entry, casino expenses, personal shopping,
+spa treatments, gym memberships, vacation expenses, holiday travel,
+party expenses, and personal entertainment of any kind.
+
+SECTION 5.1 — RECEIPT REQUIREMENTS
+All claims above $25 must be accompanied by an original receipt.
+Receipts must show merchant name, date, itemized costs, and total amount.
+
+SECTION 5.2 — CURRENCY
+All claims must be submitted in the currency of the country of expenditure.
+Foreign currency claims will be converted at the rate on the date of expense.
+
+SECTION 5.3 — WEEKEND AND HOLIDAY EXPENSES
+Expenses incurred on weekends (Saturday and Sunday) or public holidays
+require prior written approval from the department head.
+Without prior approval, weekend claims will be flagged for review.
+
+SECTION 6.1 — APPROVAL WORKFLOW
+Claims under the spending limit: Auto-approved by system.
+Claims flagged by system: Require finance team review within 3 business days.
+Claims rejected by system: Employee must resubmit with corrections.
+
+SECTION 6.2 — HUMAN OVERRIDE
+Finance auditors may override any AI decision with a written justification.
+All overrides are logged for compliance audit purposes.
+
+SECTION 7.1 — REIMBURSEMENT TIMELINE
+Approved claims are reimbursed within 5 business days.
+Flagged claims may take up to 10 business days pending review.
