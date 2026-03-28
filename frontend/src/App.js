@@ -1,6 +1,8 @@
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useEffect } from 'react-router-dom';
 import EmployeePortal from './pages/EmployeePortal';
 import AuditorDashboard from './pages/AuditorDashboard';
+
+const API = 'https://expenseai-backend.onrender.com';
 
 function NavBar() {
   const location = useLocation();
@@ -110,6 +112,16 @@ function NavBar() {
 }
 
 function App() {
+
+  // ── Keep-Alive ping every 10 minutes ──
+  useEffect(() => {
+    const keepAlive = setInterval(() => {
+      fetch(`${API}/`)
+        .catch(() => {});
+    }, 600000);
+    return () => clearInterval(keepAlive);
+  }, []);
+
   return (
     <BrowserRouter>
       <NavBar />
