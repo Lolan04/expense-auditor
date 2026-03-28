@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Link, useLocation, useEffect } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import EmployeePortal from './pages/EmployeePortal';
 import AuditorDashboard from './pages/AuditorDashboard';
 
@@ -78,7 +79,7 @@ function NavBar() {
           background: active('/')
             ? 'linear-gradient(135deg, #e60023, #ff4d6d)'
             : 'transparent',
-          color: active('/') ? '#fff' : '#777',
+          color: active('/') ? '#fff' : '#0e0d0d',
           boxShadow: active('/')
             ? '0 3px 12px rgba(230,0,35,0.25)'
             : 'none',
@@ -97,7 +98,7 @@ function NavBar() {
           background: active('/dashboard')
             ? 'linear-gradient(135deg, #e60023, #ff4d6d)'
             : 'transparent',
-          color: active('/dashboard') ? '#fff' : '#777',
+          color: active('/dashboard') ? '#fff' : '#0a0a0a',
           boxShadow: active('/dashboard')
             ? '0 3px 12px rgba(230,0,35,0.25)'
             : 'none',

@@ -79,3 +79,4 @@ def override_claim(claim_id: int, status: str, comment: str, by: str):
     ''', (status, comment, by, status, claim_id))
     conn.commit()
     conn.close()
+    

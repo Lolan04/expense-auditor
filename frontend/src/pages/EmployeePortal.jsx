@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-const F = "'Playfair Display', serif";
-const API = 'https://expenseai-backend.onrender.com';
+const F   = "'Playfair Display', serif";
+const API = 'https://expenseai-backend-c8dn.onrender.com';
 
 const lbl = {
   display: 'block', fontSize: '12px', fontWeight: '700',
@@ -226,26 +226,11 @@ export default function EmployeePortal() {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div>
                 <label style={lbl}>Full Name</label>
-                <input
-                  name="employee_name"
-                  value={form.employee_name}
-                  onChange={handle}
-                  required
-                  placeholder="Abhiram Kumar"
-                  style={inp}
-                />
+                <input name="employee_name" value={form.employee_name} onChange={handle} required placeholder="Abhiram Kumar" style={inp} />
               </div>
               <div>
                 <label style={lbl}>Email</label>
-                <input
-                  name="employee_email"
-                  type="email"
-                  value={form.employee_email}
-                  onChange={handle}
-                  required
-                  placeholder="you@company.com"
-                  style={inp}
-                />
+                <input name="employee_email" type="email" value={form.employee_email} onChange={handle} required placeholder="you@company.com" style={inp} />
               </div>
             </div>
           </div>
@@ -271,28 +256,11 @@ export default function EmployeePortal() {
               </div>
               <div>
                 <label style={lbl}>Date</label>
-                <input
-                  name="claim_date"
-                  type="date"
-                  value={form.claim_date}
-                  onChange={handle}
-                  required
-                  style={inp}
-                />
+                <input name="claim_date" type="date" value={form.claim_date} onChange={handle} required style={inp} />
               </div>
               <div>
                 <label style={lbl}>Amount (USD)</label>
-                <input
-                  name="amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.amount}
-                  onChange={handle}
-                  required
-                  placeholder="0.00"
-                  style={inp}
-                />
+                <input name="amount" type="number" min="0" step="0.01" value={form.amount} onChange={handle} required placeholder="0.00" style={inp} />
               </div>
             </div>
           </div>
@@ -340,12 +308,7 @@ export default function EmployeePortal() {
               background: file ? '#f0fff6' : '#fafafa',
               transition: 'all 0.2s'
             }}>
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                onChange={e => setFile(e.target.files[0])}
-                style={{ display: 'none' }}
-              />
+              <input type="file" accept="image/*,.pdf" onChange={e => setFile(e.target.files[0])} style={{ display: 'none' }} />
               {file ? (
                 <div>
                   <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
@@ -366,9 +329,7 @@ export default function EmployeePortal() {
           <button type="submit" disabled={loading} style={{
             width: '100%',
             padding: isMobile ? '14px' : '16px',
-            background: loading
-              ? '#ccc'
-              : 'linear-gradient(135deg, #e60023, #ff4d6d)',
+            background: loading ? '#ccc' : 'linear-gradient(135deg, #e60023, #ff4d6d)',
             color: '#fff', border: 'none', borderRadius: '16px',
             fontSize: isMobile ? '15px' : '16px',
             fontWeight: '700',

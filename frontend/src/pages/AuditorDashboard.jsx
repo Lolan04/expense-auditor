@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const F   = "'Playfair Display', serif";
-const API = 'https://expenseai-backend.onrender.com';
+const API = 'https://expenseai-backend-c8dn.onrender.com';
 
 const inp = {
   width: '100%', padding: '11px 14px', border: '1.5px solid #e8e8e8',
