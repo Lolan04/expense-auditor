@@ -226,7 +226,7 @@ export default function EmployeePortal() {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div>
                 <label style={lbl}>Full Name</label>
-                <input name="employee_name" value={form.employee_name} onChange={handle} required placeholder="Abhiram Kumar" style={inp} />
+                <input name="employee_name" value={form.employee_name} onChange={handle} required placeholder="Abhiram P Prasad" style={inp} />
               </div>
               <div>
                 <label style={lbl}>Email</label>
