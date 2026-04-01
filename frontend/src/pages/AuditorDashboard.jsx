@@ -1,174 +1,124 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
-const F   = "'Playfair Display', serif";
-const API = 'https://expenseai-backend-c8dn.onrender.com';
+const API = process.env.REACT_APP_API_URL || "https://expenseai-backend-c8dn.onrender.com";
 
-const inp = {
-  width: '100%', padding: '11px 14px', border: '1.5px solid #e8e8e8',
-  borderRadius: '12px', fontSize: '13px', outline: 'none',
-  boxSizing: 'border-box', background: '#fafafa', color: '#222', fontFamily: F
+const VC = {
+  Approved: { bg:"#d4edda", color:"#155724", dot:"#28a745" },
+  Flagged:  { bg:"#fff3cd", color:"#856404", dot:"#ffc107" },
+  Rejected: { bg:"#f8d7da", color:"#721c24", dot:"#dc3545" },
+  Pending:  { bg:"#e2e3e5", color:"#383d41", dot:"#6c757d" },
 };
 
-const statusColor  = s => s === 'APPROVED' ? '#00a855' : s === 'REJECTED' ? '#e60023' : '#f0a500';
-const statusBg     = s => s === 'APPROVED' ? '#f0fff6' : s === 'REJECTED' ? '#fff5f5' : '#fffbf0';
-const statusBorder = s => s === 'APPROVED' ? '#b8f0d0' : s === 'REJECTED' ? '#ffd0d0' : '#ffe8a0';
-const statusEmoji  = s => s === 'APPROVED' ? '✅' : s === 'REJECTED' ? '❌' : '⚠️';
-const statusLabel  = s => s === 'APPROVED' ? 'Approved' : s === 'REJECTED' ? 'Rejected' : 'Flagged';
-
-const badge = s => ({
-  padding: '5px 14px', borderRadius: '20px', fontSize: '12px',
-  fontWeight: '700', fontFamily: F, display: 'inline-flex',
-  alignItems: 'center', gap: '4px',
-  background: statusBg(s), color: statusColor(s),
-  border: `1.5px solid ${statusBorder(s)}`
-});
-
 export default function AuditorDashboard() {
-  const [claims,   setClaims]   = useState([]);
+  const [receipts, setReceipts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [override, setOverride] = useState({ status: 'APPROVED', comment: '', by: '' });
-  const [msg,      setMsg]      = useState('');
-  const [loading,  setLoading]  = useState(true);
-  const [imgError, setImgError] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [override, setOverride] = useState({ new_verdict:"", comment:"", auditor_name:"" });
+  const [overrideMsg, setOverrideMsg] = useState("");
+  const [filter, setFilter] = useState("All");
 
-  const load = async () => {
+  useEffect(() => { fetchReceipts(); }, []);
+
+  const fetchReceipts = async () => {
     setLoading(true);
-    try {
-      const res  = await fetch(`${API}/api/receipts/all`);
-      const data = await res.json();
-      setClaims(Array.isArray(data) ? data : []);
-    } catch { setClaims([]); }
+    try { const r = await fetch(`${API}/api/receipts`); setReceipts(await r.json()); }
+    catch { setReceipts([]); }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
-
-  const applyOverride = async () => {
-    if (!override.comment || !override.by) { setMsg('❌ Fill in all override fields.'); return; }
-    const res  = await fetch(`${API}/api/receipts/override/${selected.id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(override)
-    });
-    const data = await res.json();
-    setMsg('✅ ' + data.message);
-    setSelected(null);
-    load();
+  const openDetail = async (id) => {
+    setSelected(id); setDetail(null); setOverrideMsg("");
+    setOverride({ new_verdict:"", comment:"", auditor_name:"" });
+    setDetailLoading(true);
+    try { const r = await fetch(`${API}/api/receipts/${id}`); setDetail(await r.json()); }
+    catch { setDetail(null); }
+    setDetailLoading(false);
   };
 
-  const counts = {
-    total:    claims.length,
-    approved: claims.filter(c => c.status === 'APPROVED').length,
-    flagged:  claims.filter(c => c.status === 'FLAGGED').length,
-    rejected: claims.filter(c => c.status === 'REJECTED').length,
+  const submitOverride = async () => {
+    if (!override.new_verdict || !override.comment || !override.auditor_name) {
+      setOverrideMsg("Please fill all fields."); return;
+    }
+    try {
+      const r = await fetch(`${API}/api/receipts/${selected}/override`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(override),
+      });
+      if (r.ok) { setOverrideMsg("Override applied!"); fetchReceipts(); openDetail(selected); }
+      else { const e = await r.json(); setOverrideMsg("Failed: " + (e.detail || "Error")); }
+    } catch { setOverrideMsg("Network error."); }
   };
 
-  const sorted = [...claims].sort((a, b) => {
-    const order = { REJECTED: 0, FLAGGED: 1, APPROVED: 2 };
-    return (order[a.status] ?? 3) - (order[b.status] ?? 3);
-  });
-
-  const getImageUrl = path => {
-    if (!path) return null;
-    const filename = path.split('/').pop().split('\\').pop();
-    return `${API}/uploads/${filename}`;
+  const filtered = filter === "All" ? receipts : receipts.filter((r) => r.ai_verdict === filter);
+  const stats = {
+    total: receipts.length,
+    approved: receipts.filter((r) => r.ai_verdict === "Approved").length,
+    flagged: receipts.filter((r) => r.ai_verdict === "Flagged").length,
+    rejected: receipts.filter((r) => r.ai_verdict === "Rejected").length,
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5', padding: '32px 24px' }}>
-      <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+    <div style={{ minHeight:"100vh", background:"#f0f2f5", fontFamily:"Arial, sans-serif" }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-          <div>
-            <h1 style={{ margin: '0 0 4px', fontFamily: F, fontWeight: '700', fontSize: '24px', color: '#111' }}>
-              📊 Finance Auditor Dashboard
-            </h1>
-            <p style={{ margin: 0, color: '#aaa', fontSize: '14px', fontFamily: F }}>Review and override AI-audited expense claims</p>
-          </div>
-          <button onClick={load} style={{
-            padding: '10px 22px', background: '#fff', color: '#555',
-            border: '1.5px solid #e0e0e0', borderRadius: '12px', cursor: 'pointer',
-            fontWeight: '700', fontFamily: F, fontSize: '13px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-          }}>
-            🔄 Refresh
-          </button>
-        </div>
+      <div style={{ background:"linear-gradient(135deg,#1a1a2e,#16213e)", padding:"20px 32px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <h1 style={{ color:"#fff", margin:0, fontSize:22, fontWeight:700 }}>Finance Audit Dashboard</h1>
+        <button onClick={fetchReceipts} style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"1px solid rgba(255,255,255,0.3)", padding:"8px 18px", borderRadius:8, cursor:"pointer", fontSize:14 }}>
+          Refresh
+        </button>
+      </div>
 
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
-          {[
-            { label: 'Total Claims', value: counts.total,    color: '#5a6aaa', bg: '#f0f2ff', border: '#d0d8ff', emoji: '📋' },
-            { label: 'Approved',     value: counts.approved, color: '#00a855', bg: '#f0fff6', border: '#b8f0d0', emoji: '✅' },
-            { label: 'Flagged',      value: counts.flagged,  color: '#f0a500', bg: '#fffbf0', border: '#ffe8a0', emoji: '⚠️' },
-            { label: 'Rejected',     value: counts.rejected, color: '#e60023', bg: '#fff5f5', border: '#ffd0d0', emoji: '❌' },
-          ].map(({ label, value, color, bg, border, emoji }) => (
-            <div key={label} style={{
-              background: '#fff', borderRadius: '18px', padding: '22px 20px',
-              border: '1px solid #f0f0f0', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-              borderTop: `4px solid ${color}`
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '32px', fontWeight: '800', color, fontFamily: F, lineHeight: 1 }}>{value}</div>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '8px', fontFamily: F, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-                </div>
-                <div style={{ fontSize: '28px', background: bg, padding: '8px', borderRadius: '12px', border: `1px solid ${border}` }}>{emoji}</div>
-              </div>
+      <div style={{ padding:"24px 32px" }}>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+          {[["Total Claims",stats.total,"#6c757d"],["Approved",stats.approved,"#28a745"],["Flagged",stats.flagged,"#ffc107"],["Rejected",stats.rejected,"#dc3545"]].map(([label,value,color]) => (
+            <div key={label} style={{ background:"#fff", borderRadius:12, padding:"16px 20px", borderLeft:`4px solid ${color}`, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize:28, fontWeight:700, color }}>{value}</div>
+              <div style={{ fontSize:13, color:"#777", marginTop:4 }}>{label}</div>
             </div>
           ))}
         </div>
 
-        {/* Message */}
-        {msg && (
-          <div style={{
-            background: msg.startsWith('✅') ? '#f0fff6' : '#fff5f5',
-            color: msg.startsWith('✅') ? '#00a855' : '#e60023',
-            padding: '14px 18px', borderRadius: '12px', marginBottom: '20px',
-            fontSize: '14px', fontFamily: F, fontWeight: '600',
-            border: `1.5px solid ${msg.startsWith('✅') ? '#b8f0d0' : '#ffd0d0'}`
-          }}>
-            {msg}
-          </div>
-        )}
+        <div style={{ marginBottom:16 }}>
+          {["All","Rejected","Flagged","Approved"].map((f) => (
+            <button key={f} onClick={() => setFilter(f)} style={{ padding:"7px 18px", borderRadius:20, border:"none", cursor:"pointer", fontWeight:600, fontSize:13, marginRight:8, background:filter===f?"#0f3460":"#e9ecef", color:filter===f?"#fff":"#495057" }}>
+              {f}
+            </button>
+          ))}
+        </div>
 
-        {/* Table */}
-        <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0f0f0', overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ background:"#fff", borderRadius:12, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
-              <tr style={{ background: '#fafafa', borderBottom: '2px solid #f0f0f0' }}>
-                {['ID','Employee','Email','Category','Location','Amount','Date','Status','Action'].map(h => (
-                  <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: '#bbb', fontFamily: F, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>{h}</th>
+              <tr>
+                {["#","Employee","Merchant","Amount","Date","Verdict","Action"].map((h) => (
+                  <th key={h} style={{ background:"#f8f9fa", padding:"12px 16px", textAlign:"left", fontSize:13, fontWeight:600, color:"#495057", borderBottom:"1px solid #dee2e6" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '60px', color: '#ccc', fontFamily: F, fontSize: '15px' }}>⏳ Loading claims...</td></tr>
-              ) : sorted.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '60px', fontFamily: F }}>
-                  <div style={{ fontSize: '40px', marginBottom: '12px' }}>📭</div>
-                  <div style={{ color: '#ccc', fontSize: '15px' }}>No claims yet. Submit from Employee Portal.</div>
-                </td></tr>
-              ) : sorted.map((c, i) => (
-                <tr key={c.id} style={{ borderBottom: '1px solid #f8f8f8', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                  <td style={{ padding: '14px 16px', fontSize: '13px', color: '#bbb', fontFamily: F }}>#{c.id}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '13px', color: '#222', fontWeight: '700', fontFamily: F }}>{c.employee_name}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '12px', color: '#bbb', fontFamily: F }}>{c.employee_email}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '13px', color: '#555', fontFamily: F }}>{c.category}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '13px', color: '#555', fontFamily: F }}>{c.location}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '13px', color: '#222', fontWeight: '700', fontFamily: F }}>${c.amount}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '12px', color: '#bbb', fontFamily: F }}>{c.claim_date}</td>
-                  <td style={{ padding: '14px 16px' }}><span style={badge(c.status)}>{statusEmoji(c.status)} {statusLabel(c.status)}</span></td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <button onClick={() => { setSelected(c); setMsg(''); setImgError(false); }} style={{
-                      padding: '7px 18px', background: '#e60023', color: '#fff',
-                      border: 'none', borderRadius: '10px', cursor: 'pointer',
-                      fontSize: '12px', fontWeight: '700', fontFamily: F,
-                      boxShadow: '0 2px 8px rgba(230,0,35,0.25)'
-                    }}>
-                      View
-                    </button>
+                <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"#999" }}>Loading...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"#999" }}>No claims found</td></tr>
+              ) : filtered.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}><strong style={{ color:"#6c757d" }}>#{r.id}</strong></td>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}>
+                    <div style={{ fontWeight:600 }}>{r.employee_name}</div>
+                    <div style={{ fontSize:12, color:"#888" }}>{r.employee_email}</div>
+                  </td>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}>{r.merchant_name || "—"}</td>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}><strong>{r.ocr_amount} {r.ocr_currency}</strong></td>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}>{r.expense_date}</td>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}>
+                    <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:12, fontSize:12, fontWeight:700, background:VC[r.ai_verdict]?.bg, color:VC[r.ai_verdict]?.color }}>{r.ai_verdict}</span>
+                    {r.override_by && <div style={{ fontSize:11, color:"#888", marginTop:3 }}>Overridden by {r.override_by}</div>}
+                  </td>
+                  <td style={{ padding:"12px 16px", fontSize:14, borderBottom:"1px solid #f0f0f0" }}>
+                    <button onClick={() => openDetail(r.id)} style={{ padding:"6px 14px", background:"#0f3460", color:"#fff", border:"none", borderRadius:6, cursor:"pointer", fontSize:13 }}>View Details</button>
                   </td>
                 </tr>
               ))}
@@ -176,102 +126,101 @@ export default function AuditorDashboard() {
           </table>
         </div>
 
-        {/* Modal */}
-        {selected && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: '#fff', borderRadius: '24px', padding: '32px', maxWidth: '540px', width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-
-              {/* Modal Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-                <h3 style={{ margin: 0, color: '#111', fontFamily: F, fontWeight: '700', fontSize: '18px' }}>
-                  🔍 Claim #{selected.id}
-                </h3>
-                <button onClick={() => setSelected(null)} style={{
-                  background: '#f5f5f5', border: 'none', borderRadius: '50%',
-                  width: '34px', height: '34px', fontSize: '16px', cursor: 'pointer', color: '#888'
-                }}>✕</button>
-              </div>
-
-              {/* Receipt Image */}
-              <div style={{ marginBottom: '18px' }}>
-                <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#bbb', fontFamily: F, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>🧾 Receipt Image</p>
-                {!imgError && getImageUrl(selected.receipt_path) ? (
-                  <img
-                    src={getImageUrl(selected.receipt_path)}
-                    alt="Receipt"
-                    onError={() => setImgError(true)}
-                    style={{ width: '100%', maxHeight: '220px', objectFit: 'contain', borderRadius: '14px', border: '1.5px solid #f0f0f0', background: '#fafafa', display: 'block' }}
-                  />
-                ) : (
-                  <div style={{ height: '90px', borderRadius: '14px', border: '1.5px dashed #e8e8e8', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: '#ccc', fontFamily: F, fontSize: '13px' }}>📄 PDF or preview unavailable</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Extracted Data */}
-              <div style={{ background: '#fafafa', borderRadius: '16px', padding: '18px', marginBottom: '16px', border: '1px solid #f0f0f0' }}>
-                <p style={{ margin: '0 0 12px', fontSize: '11px', color: '#bbb', fontFamily: F, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>📋 Extracted Data</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  {[
-                    ['Employee', selected.employee_name],
-                    ['Amount',   `$${selected.amount}`],
-                    ['Category', selected.category],
-                    ['Location', selected.location],
-                    ['Date',     selected.claim_date],
-                    ['Merchant', selected.merchant],
-                  ].map(([l, v]) => (
-                    <div key={l} style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px', border: '1px solid #f0f0f0' }}>
-                      <div style={{ fontSize: '11px', color: '#bbb', fontFamily: F, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>{l}</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#333', fontFamily: F }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px', border: '1px solid #f0f0f0', marginTop: '10px' }}>
-                  <div style={{ fontSize: '11px', color: '#bbb', fontFamily: F, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>Business Purpose</div>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', fontFamily: F }}>{selected.business_purpose}</div>
-                </div>
-              </div>
-
-              {/* Status Badge */}
-              <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-                <span style={badge(selected.status)}>{statusEmoji(selected.status)} {statusLabel(selected.status)}</span>
-              </div>
-
-              {/* AI Reason */}
-              <div style={{ background: '#fff8f0', border: '1.5px solid #ffe0c0', borderRadius: '14px', padding: '16px', marginBottom: '22px' }}>
-                <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#e08030', fontFamily: F, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>🤖 AI Reason</p>
-                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#a06030', fontFamily: F, lineHeight: '1.7' }}>{selected.reason}</p>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#c09050', fontFamily: F, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>📄 Policy Applied</p>
-                <p style={{ margin: 0, fontSize: '12px', color: '#b08040', fontFamily: F, fontStyle: 'italic', lineHeight: '1.6' }}>{selected.policy_snippet}</p>
-              </div>
-
-              {/* Override Panel */}
-              <div style={{ borderTop: '2px dashed #f0f0f0', paddingTop: '20px' }}>
-                <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#888', fontFamily: F, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px' }}>🔧 Finance Override</p>
-                <select value={override.status} onChange={e => setOverride({ ...override, status: e.target.value })} style={{ ...inp, marginBottom: '10px' }}>
-                  <option>APPROVED</option>
-                  <option>REJECTED</option>
-                  <option>FLAGGED</option>
-                </select>
-                <input placeholder="👤 Reviewer name (e.g. Priya — Finance)" value={override.by} onChange={e => setOverride({ ...override, by: e.target.value })} style={{ ...inp, marginBottom: '10px' }} />
-                <textarea placeholder="💬 Override reason / comment..." value={override.comment} onChange={e => setOverride({ ...override, comment: e.target.value })} rows={3} style={{ ...inp, resize: 'vertical', marginBottom: '16px', lineHeight: '1.7' }} />
-                <button onClick={applyOverride} style={{
-                  width: '100%', padding: '14px',
-                  background: 'linear-gradient(135deg, #e60023, #ff4d6d)',
-                  color: '#fff', border: 'none', borderRadius: '14px', cursor: 'pointer',
-                  fontWeight: '700', fontSize: '15px', fontFamily: F,
-                  boxShadow: '0 4px 16px rgba(230,0,35,0.3)'
-                }}>
-                  ✅ Apply Override
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
-
       </div>
+
+      {selected && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.5)", zIndex:1000, display:"flex", alignItems:"flex-start", justifyContent:"center", overflowY:"auto", padding:"40px 20px" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
+          <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:900, boxShadow:"0 30px 80px rgba(0,0,0,0.3)" }}>
+
+            <div style={{ background:"linear-gradient(135deg,#667eea,#764ba2)", padding:"20px 28px", borderRadius:"16px 16px 0 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ color:"#fff" }}>
+                <div style={{ fontWeight:700, fontSize:18 }}>Audit Detail — Claim #{selected}</div>
+                {detail && <div style={{ fontSize:13, opacity:0.85 }}>{detail.employee_name} · {detail.expense_date}</div>}
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontSize:16 }}>Close</button>
+            </div>
+
+            <div style={{ padding:"24px 28px" }}>
+              {detailLoading ? (
+                <div style={{ textAlign:"center", padding:40, color:"#999" }}>Loading...</div>
+              ) : detail ? (
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24 }}>
+
+                  <div>
+                    <div style={{ fontWeight:700, marginBottom:12, fontSize:15 }}>Receipt Image</div>
+                    {detail.receipt_image_base64 ? (
+                      <img src={`data:image/png;base64,${detail.receipt_image_base64}`} alt="receipt" style={{ width:"100%", borderRadius:10, border:"1px solid #ddd" }} />
+                    ) : (
+                      <div style={{ background:"#f0f0f0", height:200, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", color:"#999" }}>No image</div>
+                    )}
+                    <div style={{ marginTop:16 }}>
+                      <div style={{ fontWeight:700, marginBottom:10, fontSize:15 }}>Extracted Data</div>
+                      {[["Merchant",detail.merchant_name],["Amount",`${detail.ocr_amount} ${detail.ocr_currency}`],["Receipt Date",detail.ocr_date||"Not detected"],["Expense Date",detail.expense_date],["Employee",detail.employee_name],["Email",detail.employee_email]].map(([k,v]) => (
+                        <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid #f0f0f0", fontSize:14 }}>
+                          <span style={{ color:"#666" }}>{k}</span>
+                          <span style={{ fontWeight:600 }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontWeight:700, marginBottom:12, fontSize:15 }}>AI Audit Result</div>
+                    <div style={{ background:VC[detail.ai_verdict]?.bg, border:`2px solid ${VC[detail.ai_verdict]?.dot}`, borderRadius:10, padding:16, marginBottom:16 }}>
+                      <div style={{ fontWeight:700, fontSize:18, color:VC[detail.ai_verdict]?.color }}>{detail.ai_verdict}</div>
+                      <div style={{ fontSize:14, color:VC[detail.ai_verdict]?.color, marginTop:8 }}>{detail.ai_explanation}</div>
+                    </div>
+                    {detail.policy_snippet && (
+                      <div style={{ marginBottom:16 }}>
+                        <div style={{ fontWeight:700, marginBottom:8, fontSize:15 }}>Policy Reference</div>
+                        <div style={{ background:"#f8f9fa", borderLeft:"4px solid #667eea", padding:"12px 16px", borderRadius:6, fontSize:13, color:"#555", fontStyle:"italic" }}>"{detail.policy_snippet}"</div>
+                      </div>
+                    )}
+                    <div style={{ marginBottom:16 }}>
+                      <div style={{ fontWeight:700, marginBottom:8, fontSize:15 }}>Business Purpose</div>
+                      <div style={{ background:"#f8f9fa", padding:"12px 16px", borderRadius:8, fontSize:14, color:"#555" }}>{detail.description}</div>
+                    </div>
+                    <div style={{ background:"#f0f4ff", borderRadius:10, padding:16, border:"1px solid #c7d2fe" }}>
+                      <div style={{ fontWeight:700, marginBottom:12, fontSize:15 }}>Finance Auditor Override</div>
+                      {detail.override_by && (
+                        <div style={{ marginBottom:10, padding:"8px 12px", background:"#fff", borderRadius:8, fontSize:13 }}>
+                          Overridden by <strong>{detail.override_by}</strong>: "{detail.override_comment}"
+                        </div>
+                      )}
+                      <select value={override.new_verdict} onChange={(e) => setOverride({...override,new_verdict:e.target.value})}
+                        style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #c7d2fe", fontSize:14, boxSizing:"border-box", marginBottom:10 }}>
+                        <option value="">Select new verdict...</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Flagged">Flagged</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                      <input value={override.auditor_name} onChange={(e) => setOverride({...override,auditor_name:e.target.value})}
+                        placeholder="Your name (auditor)"
+                        style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #c7d2fe", fontSize:14, boxSizing:"border-box", marginBottom:10 }} />
+                      <textarea value={override.comment} onChange={(e) => setOverride({...override,comment:e.target.value})}
+                        placeholder="Reason for override..."
+                        style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #c7d2fe", fontSize:14, boxSizing:"border-box", marginBottom:10, height:70, resize:"none" }} />
+                      <button onClick={submitOverride}
+                        style={{ width:"100%", padding:"10px", background:"#0f3460", color:"#fff", border:"none", borderRadius:8, fontWeight:700, cursor:"pointer", fontSize:14 }}>
+                        Apply Override
+                      </button>
+                      {overrideMsg && (
+                        <div style={{ marginTop:8, fontSize:13, color:overrideMsg.startsWith("Override")?"#155724":"#721c24" }}>{overrideMsg}</div>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                <div style={{ textAlign:"center", padding:40, color:"#999" }}>Could not load details.</div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

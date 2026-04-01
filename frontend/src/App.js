@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import EmployeeForm from "./components/EmployeeForm";
-import Dashboard from "./components/Dashboard";
+import EmployeePortal from "./pages/EmployeePortal";
+import AuditorDashboard from "./pages/AuditorDashboard";
 
 export default function App() {
   return (
@@ -14,9 +14,7 @@ export default function App() {
         alignItems: "center",
         fontFamily: "Arial, sans-serif"
       }}>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: 18 }}>
-          ExpenseAI
-        </div>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 18 }}>ExpenseAI</div>
         <div style={{ display: "flex", gap: 20 }}>
           <Link to="/" style={{ color: "#fff", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
             Submit Expense
@@ -27,8 +25,8 @@ export default function App() {
         </div>
       </nav>
       <Routes>
-        <Route path="/" element={<EmployeeForm />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/" element={<EmployeePortal />} />
+        <Route path="/dashboard" element={<AuditorDashboard />} />
       </Routes>
     </BrowserRouter>
   );

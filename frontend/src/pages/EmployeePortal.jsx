@@ -8,7 +8,7 @@ const VERDICT_STYLES = {
   Rejected: { bg: "#f8d7da", color: "#721c24", icon: "❌", border: "#dc3545" },
 };
 
-export default function EmployeeForm() {
+export default function EmployeePortal() {
   const [form, setForm] = useState({
     employee_name: "",
     employee_email: "",
@@ -28,12 +28,8 @@ export default function EmployeeForm() {
     const f = e.target.files[0];
     if (!f) return;
     const allowed = ["image/jpeg","image/png","image/jpg","application/pdf"];
-    if (!allowed.includes(f.type)) {
-      setError("Only JPG, PNG, or PDF files are allowed.");
-      return;
-    }
-    setFile(f);
-    setError("");
+    if (!allowed.includes(f.type)) { setError("Only JPG, PNG, or PDF files are allowed."); return; }
+    setFile(f); setError("");
     if (f.type !== "application/pdf") setFilePreview(URL.createObjectURL(f));
     else setFilePreview("pdf");
   };
@@ -89,7 +85,7 @@ export default function EmployeeForm() {
       <div style={S.card}>
         <div style={S.header}>
           <h1 style={{ margin:0, fontSize:24, fontWeight:700 }}>ExpenseAI</h1>
-          <p style={{ margin:"6px 0 0", opacity:0.85, fontSize:14 }}>Policy-First Expense Auditor — Submit receipt for instant AI review</p>
+          <p style={{ margin:"6px 0 0", opacity:0.85, fontSize:14 }}>Policy-First Expense Auditor</p>
         </div>
         <div style={S.body}>
           {!result ? (
@@ -163,6 +159,7 @@ export default function EmployeeForm() {
           )}
 
           <div style={S.divider} />
+
           <div>
             <div style={{ fontWeight:700, fontSize:15, color:"#333", marginBottom:10 }}>Check Claim Status</div>
             <div style={{ display:"flex", gap:10 }}>
@@ -186,6 +183,7 @@ export default function EmployeeForm() {
             )}
             {statusResult?.error && <div style={S.error}>❌ {statusResult.error}</div>}
           </div>
+
         </div>
       </div>
     </div>
