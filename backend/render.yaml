@@ -1,6 +1,10 @@
 services:
   - type: web
     name: expenseai-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    runtime: python
+    rootDir: backend
+    buildCommand: apt-get install -y tesseract-ocr && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
