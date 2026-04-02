@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const API = process.env.REACT_APP_API_URL || "https://expenseai-backend-c8dn.onrender.com";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 const VC = {
   Approved: { bg:"#d4edda", color:"#155724", dot:"#28a745" },
@@ -156,7 +156,14 @@ export default function AuditorDashboard() {
                     )}
                     <div style={{ marginTop:16 }}>
                       <div style={{ fontWeight:700, marginBottom:10, fontSize:15 }}>Extracted Data</div>
-                      {[["Merchant",detail.merchant_name],["Amount",`${detail.ocr_amount} ${detail.ocr_currency}`],["Receipt Date",detail.ocr_date||"Not detected"],["Expense Date",detail.expense_date],["Employee",detail.employee_name],["Email",detail.employee_email]].map(([k,v]) => (
+                      {[
+                        ["Merchant", detail.merchant_name],
+                        ["Amount", `${detail.ocr_amount} ${detail.ocr_currency}`],
+                        ["Receipt Date", detail.ocr_date || "Not detected"],
+                        ["Expense Date", detail.expense_date],
+                        ["Employee", detail.employee_name],
+                        ["Email", detail.employee_email],
+                      ].map(([k,v]) => (
                         <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid #f0f0f0", fontSize:14 }}>
                           <span style={{ color:"#666" }}>{k}</span>
                           <span style={{ fontWeight:600 }}>{v}</span>
@@ -174,13 +181,16 @@ export default function AuditorDashboard() {
                     {detail.policy_snippet && (
                       <div style={{ marginBottom:16 }}>
                         <div style={{ fontWeight:700, marginBottom:8, fontSize:15 }}>Policy Reference</div>
-                        <div style={{ background:"#f8f9fa", borderLeft:"4px solid #667eea", padding:"12px 16px", borderRadius:6, fontSize:13, color:"#555", fontStyle:"italic" }}>"{detail.policy_snippet}"</div>
+                        <div style={{ background:"#f8f9fa", borderLeft:"4px solid #667eea", padding:"12px 16px", borderRadius:6, fontSize:13, color:"#555", fontStyle:"italic" }}>
+                          "{detail.policy_snippet}"
+                        </div>
                       </div>
                     )}
                     <div style={{ marginBottom:16 }}>
                       <div style={{ fontWeight:700, marginBottom:8, fontSize:15 }}>Business Purpose</div>
                       <div style={{ background:"#f8f9fa", padding:"12px 16px", borderRadius:8, fontSize:14, color:"#555" }}>{detail.description}</div>
                     </div>
+
                     <div style={{ background:"#f0f4ff", borderRadius:10, padding:16, border:"1px solid #c7d2fe" }}>
                       <div style={{ fontWeight:700, marginBottom:12, fontSize:15 }}>Finance Auditor Override</div>
                       {detail.override_by && (

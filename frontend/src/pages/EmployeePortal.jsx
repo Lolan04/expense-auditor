@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const API = process.env.REACT_APP_API_URL || "https://expenseai-backend-c8dn.onrender.com";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 const VERDICT_STYLES = {
   Approved: { bg: "#d4edda", color: "#155724", icon: "✅", border: "#28a745" },
@@ -10,10 +10,7 @@ const VERDICT_STYLES = {
 
 export default function EmployeePortal() {
   const [form, setForm] = useState({
-    employee_name: "",
-    employee_email: "",
-    expense_date: "",
-    description: ""
+    employee_name: "", employee_email: "", expense_date: "", description: ""
   });
   const [file, setFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
@@ -114,9 +111,9 @@ export default function EmployeePortal() {
                   {filePreview && filePreview !== "pdf" ? (
                     <img src={filePreview} alt="receipt" style={{ maxHeight:160, maxWidth:"100%", borderRadius:8 }} />
                   ) : filePreview === "pdf" ? (
-                    <div style={{ fontSize:36 }}>📄<br/><span style={{ fontSize:14, color:"#555" }}>{file?.name}</span></div>
+                    <div style={{ fontSize:36 }}>📄<br/><span style={{ fontSize:14,color:"#555" }}>{file?.name}</span></div>
                   ) : (
-                    <><div style={{ fontSize:32 }}>📎</div><div style={{ fontSize:14, color:"#555", marginTop:8 }}>Click to upload receipt</div></>
+                    <><div style={{ fontSize:32 }}>📎</div><div style={{ fontSize:14,color:"#555",marginTop:8 }}>Click to upload receipt</div></>
                   )}
                   <div style={{ color:"#888", fontSize:13, marginTop:6 }}>JPG, PNG, PDF supported</div>
                 </div>
@@ -163,7 +160,7 @@ export default function EmployeePortal() {
           <div>
             <div style={{ fontWeight:700, fontSize:15, color:"#333", marginBottom:10 }}>Check Claim Status</div>
             <div style={{ display:"flex", gap:10 }}>
-              <input style={{...S.input, flex:1}} placeholder="Enter Claim ID (e.g. 5)" value={claimId} onChange={e=>setClaimId(e.target.value)} />
+              <input style={{...S.input,flex:1}} placeholder="Enter Claim ID (e.g. 5)" value={claimId} onChange={e=>setClaimId(e.target.value)} />
               <button onClick={checkStatus} disabled={statusLoading} style={{ padding:"10px 20px", background:"#0f3460", color:"#fff", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer" }}>
                 {statusLoading ? "..." : "Check"}
               </button>

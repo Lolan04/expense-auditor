@@ -8,9 +8,14 @@ import os
 import io
 import base64
 import re
+import platform
 from datetime import datetime
 from typing import Optional
 import fitz
+
+# Auto-detect Windows or Linux
+if platform.system() == "Windows":
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 try:
     from groq import Groq
@@ -25,11 +30,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://expenseai-frontend-qv8b.onrender.com",
-        "http://localhost:3000",
-        "*"
-    ],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -92,9 +93,12 @@ def is_blurry(image: Image.Image) -> bool:
 
 
 def extract_receipt_data(image: Image.Image):
-    raw_text = pytesseract.image_to_string(image)
+    try:
+        raw_text = pytesseract.image_to_string(image)
+    except Exception as e:
+        return "Unknown", "Not found", "USD", None, str(e), "OK"
     if len(raw_text.strip()) < 20:
-        return None, None, None, None, raw_text, "BLURRY"
+        return "Unknown", "Not found", "USD", None, raw_text, "OK"
     lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
     merchant = lines[0] if lines else "Unknown"
     amount_match = re.search(r'[\$£€]?\s*(\d+[\.,]\d{2})', raw_text)
@@ -203,14 +207,8 @@ async def submit_receipt(
     else:
         raise HTTPException(status_code=400, detail="Unsupported file. Upload JPG, PNG, or PDF.")
 
-    if is_blurry(image):
-        raise HTTPException(status_code=422, detail="Receipt is blurry or unreadable. Please upload a clearer photo.")
-
+    date_warning = None
     merchant, amount, currency, ocr_date, ocr_raw, ocr_status = extract_receipt_data(image)
-
-    if ocr_status == "BLURRY":
-        raise HTTPException(status_code=422, detail="Receipt is unreadable. Please upload a clearer image.")
-
     date_warning = validate_dates(expense_date, ocr_date)
 
     buffered = io.BytesIO()
