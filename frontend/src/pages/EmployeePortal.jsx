@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:8000";
+const API = process.env.REACT_APP_API_URL || "https://expenseai-backend-t63s.onrender.com";
 
 const VERDICT_STYLES = {
   Approved: { bg: "#d4edda", color: "#155724", icon: "✅", border: "#28a745" },
