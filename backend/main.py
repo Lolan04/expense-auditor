@@ -17,14 +17,10 @@ import fitz
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-try:
-    from groq import Groq
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    AI_PROVIDER = "groq"
-except:
-    import openai
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    AI_PROVIDER = "openai"
+# Groq client setup
+from groq import Groq
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 app = FastAPI()
 
@@ -96,12 +92,13 @@ def extract_receipt_data(image: Image.Image):
     try:
         raw_text = pytesseract.image_to_string(image)
     except Exception as e:
-        return "Unknown", "Not found", "USD", None, str(e), "OK"
-    if len(raw_text.strip()) < 20:
+        print(f"OCR error: {e}")
+        return "Unknown", "Not found", "USD", None, "", "OK"
+    if len(raw_text.strip()) < 5:
         return "Unknown", "Not found", "USD", None, raw_text, "OK"
     lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
     merchant = lines[0] if lines else "Unknown"
-    amount_match = re.search(r'[\$£€]?\s*(\d+[\.,]\d{2})', raw_text)
+    amount_match = re.search(r'[\$£€₹]?\s*(\d+[\.,]\d{2})', raw_text)
     amount = amount_match.group(0).strip() if amount_match else "Not found"
     currency = "USD"
     if "£" in raw_text: currency = "GBP"
@@ -131,7 +128,10 @@ def validate_dates(expense_date: str, ocr_date: Optional[str]) -> Optional[str]:
 
 
 def ai_audit(merchant, amount, currency, description, expense_date, ocr_raw):
-    prompt = f"""You are a corporate expense auditor. Audit this expense against company policy.
+    if not client:
+        return "Flagged", "GROQ_API_KEY not configured on server", "N/A", "Medium"
+
+    prompt = f"""You are a strict corporate expense auditor. Audit this expense against company policy.
 
 COMPANY POLICY:
 {POLICY_TEXT}
@@ -143,41 +143,47 @@ EXPENSE DETAILS:
 - Expense Date: {expense_date}
 - Receipt OCR Text: {ocr_raw[:500]}
 
-Respond in this exact JSON format:
+You MUST respond ONLY in this exact JSON format with no extra text:
 {{
-  "verdict": "Approved" or "Flagged" or "Rejected",
+  "verdict": "Approved",
   "explanation": "One sentence citing specific policy rule",
   "policy_snippet": "The exact policy rule that applies",
-  "risk_level": "Low" or "Medium" or "High"
-}}"""
+  "risk_level": "Low"
+}}
+
+verdict must be exactly one of: Approved, Flagged, Rejected
+risk_level must be exactly one of: Low, Medium, High"""
+
     try:
-        if AI_PROVIDER == "groq":
-            response = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1
-            )
-            result_text = response.choices[0].message.content
-        else:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1
-            )
-            result_text = response.choices[0].message.content
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=200
+        )
+        result_text = response.choices[0].message.content
+        print(f"Groq response: {result_text}")
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
             import json
             data = json.loads(json_match.group())
-            return data.get("verdict","Flagged"), data.get("explanation",""), data.get("policy_snippet",""), data.get("risk_level","Medium")
+            verdict = data.get("verdict", "Flagged")
+            if verdict not in ["Approved", "Flagged", "Rejected"]:
+                verdict = "Flagged"
+            return verdict, data.get("explanation",""), data.get("policy_snippet",""), data.get("risk_level","Medium")
     except Exception as e:
         print(f"AI error: {e}")
-    return "Flagged", "Could not complete AI audit - please review manually", "N/A", "Medium"
+        return "Flagged", f"AI audit error: {str(e)}", "N/A", "Medium"
+
+    return "Flagged", "Could not parse AI response", "N/A", "Medium"
 
 
 @app.get("/")
 def root():
-    return {"status": "ExpenseAI Backend Running"}
+    return {
+        "status": "ExpenseAI Backend Running",
+        "groq_configured": client is not None
+    }
 
 
 @app.post("/api/receipts/submit")
@@ -207,7 +213,6 @@ async def submit_receipt(
     else:
         raise HTTPException(status_code=400, detail="Unsupported file. Upload JPG, PNG, or PDF.")
 
-    date_warning = None
     merchant, amount, currency, ocr_date, ocr_raw, ocr_status = extract_receipt_data(image)
     date_warning = validate_dates(expense_date, ocr_date)
 
