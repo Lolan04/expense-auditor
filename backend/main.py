@@ -143,9 +143,8 @@ EXPENSE DETAILS:
 - Expense Date: {expense_date}
 - Receipt OCR Text: {ocr_raw[:500]}
 
-Respond ONLY with valid JSON. No markdown, no code blocks, no extra text.
-Just the raw JSON object like this:
-{{"verdict": "Approved", "explanation": "one sentence", "policy_snippet": "policy rule", "risk_level": "Low"}}
+Respond ONLY with raw JSON. No markdown, no code blocks, no extra text.
+Example: {{"verdict": "Approved", "explanation": "one sentence", "policy_snippet": "policy rule", "risk_level": "Low"}}
 
 verdict must be one of: Approved, Flagged, Rejected
 risk_level must be one of: Low, Medium, High"""
@@ -154,13 +153,33 @@ risk_level must be one of: Low, Medium, High"""
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are a JSON-only responder. Always respond with raw valid JSON only. Never use markdown or code blocks."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are a JSON-only responder. Always respond with raw valid JSON only. Never use markdown or code blocks."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
             temperature=0.1,
             max_tokens=300
         )
-        result_text = response.choices.message.content.strip()
+
+        # Safe extraction of response text
+        if hasattr(response, 'choices') and len(response.choices) > 0:
+            choice = response.choices[0]
+            if hasattr(choice, 'message'):
+                result_text = choice.message.content
+            elif isinstance(choice, dict):
+                result_text = choice.get('message', {}).get('content', '')
+            else:
+                result_text = str(choice)
+        elif isinstance(response, list):
+            result_text = response[0].get('message', {}).get('content', '')
+        else:
+            result_text = str(response)
+
         print(f"Groq raw response: {result_text}")
 
         # Strip markdown code blocks if present
@@ -168,18 +187,20 @@ risk_level must be one of: Low, Medium, High"""
         result_text = re.sub(r'```', '', result_text)
         result_text = result_text.strip()
 
-        # Find JSON object
+        # Find and parse JSON
+        import json
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
-            import json
             data = json.loads(json_match.group())
             verdict = data.get("verdict", "Flagged")
             if verdict not in ["Approved", "Flagged", "Rejected"]:
                 verdict = "Flagged"
-            explanation = data.get("explanation", "Please review manually")
-            policy_snippet = data.get("policy_snippet", "N/A")
-            risk_level = data.get("risk_level", "Medium")
-            return verdict, explanation, policy_snippet, risk_level
+            return (
+                verdict,
+                data.get("explanation", "Please review manually"),
+                data.get("policy_snippet", "N/A"),
+                data.get("risk_level", "Medium")
+            )
 
     except Exception as e:
         print(f"AI error: {e}")
