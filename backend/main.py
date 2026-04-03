@@ -143,26 +143,32 @@ EXPENSE DETAILS:
 - Expense Date: {expense_date}
 - Receipt OCR Text: {ocr_raw[:500]}
 
-You MUST respond ONLY in this exact JSON format with no extra text:
-{{
-  "verdict": "Approved",
-  "explanation": "One sentence citing specific policy rule",
-  "policy_snippet": "The exact policy rule that applies",
-  "risk_level": "Low"
-}}
+Respond ONLY with valid JSON. No markdown, no code blocks, no extra text.
+Just the raw JSON object like this:
+{{"verdict": "Approved", "explanation": "one sentence", "policy_snippet": "policy rule", "risk_level": "Low"}}
 
-verdict must be exactly one of: Approved, Flagged, Rejected
-risk_level must be exactly one of: Low, Medium, High"""
+verdict must be one of: Approved, Flagged, Rejected
+risk_level must be one of: Low, Medium, High"""
 
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "You are a JSON-only responder. Always respond with raw valid JSON only. Never use markdown or code blocks."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.1,
-            max_tokens=200
+            max_tokens=300
         )
-        result_text = response.choices[0].message.content
-        print(f"Groq response: {result_text}")
+        result_text = response.choices.message.content.strip()
+        print(f"Groq raw response: {result_text}")
+
+        # Strip markdown code blocks if present
+        result_text = re.sub(r'```json', '', result_text)
+        result_text = re.sub(r'```', '', result_text)
+        result_text = result_text.strip()
+
+        # Find JSON object
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
             import json
@@ -170,7 +176,11 @@ risk_level must be exactly one of: Low, Medium, High"""
             verdict = data.get("verdict", "Flagged")
             if verdict not in ["Approved", "Flagged", "Rejected"]:
                 verdict = "Flagged"
-            return verdict, data.get("explanation",""), data.get("policy_snippet",""), data.get("risk_level","Medium")
+            explanation = data.get("explanation", "Please review manually")
+            policy_snippet = data.get("policy_snippet", "N/A")
+            risk_level = data.get("risk_level", "Medium")
+            return verdict, explanation, policy_snippet, risk_level
+
     except Exception as e:
         print(f"AI error: {e}")
         return "Flagged", f"AI audit error: {str(e)}", "N/A", "Medium"
