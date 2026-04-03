@@ -179,7 +179,7 @@ npm start
 ## 👨‍💻 Author
 
 **Abhiram**
-Campus Recruitment Technical Challenge 2026
+Cymonic Technologies Project Building Challenge 2026
 ExpenseAI — Policy-First Expense Auditor
 
 ---
